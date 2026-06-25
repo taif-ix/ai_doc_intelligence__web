@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Contract Intelligence
 
-## Getting Started
+Next.js migration of the React/Vite Contract Intelligence app.
 
-First, run the development server:
+## Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create `.env.local` for local secrets:
 
-## Learn More
+```bash
+GEMINI_API_KEY="MY_GEMINI_API_KEY"
+APP_URL="http://localhost:3000"
+BACKEND_API_URL="http://localhost:8080"
+# VITE_API_URL="http://localhost:8080" also works for compatibility.
+```
 
-To learn more about Next.js, take a look at the following resources:
+`GEMINI_API_KEY` is used only by the server-side Next API route. If it is missing or left as the placeholder value, the app falls back to its offline simulated legal analysis.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set `BACKEND_API_URL` to the FastAPI backend from `taif-ix/contract_demo`. When configured, uploads from this Next app are sent to the backend `/upload-contracts` endpoint and report downloads are proxied from `/export-excel`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The old `VITE_API_URL` value is no longer required because the migrated UI calls same-origin Next API routes under `/api`.
