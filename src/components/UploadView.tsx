@@ -326,7 +326,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
                 </div>
                 <div>
                   <h4 className={`text-xs font-bold ${activeStep >= 2 ? 'text-[#191B23]' : 'text-slate-400'}`}>
-                    Gemini AI Assessment
+                    Backend AI Assessment
                   </h4>
                   <p className="text-[10px] text-[#737686] mt-0.5">Calculating risk parameters and writing redline alternatives.</p>
                 </div>

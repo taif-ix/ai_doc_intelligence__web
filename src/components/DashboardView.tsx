@@ -205,7 +205,7 @@ export function DashboardView({
               <FileSpreadsheet className="w-12 h-12 text-[#737686]/50 mb-3" />
               <h4 className="text-sm font-bold text-[#191B23]">No analyzed documents yet</h4>
               <p className="text-xs text-[#737686] mt-1 max-w-sm">
-                Get started by clicking the &quot;Upload Contract&quot; button to let Gemini map and analyze risks.
+                Get started by clicking the &quot;Upload Contract&quot; button to send a document through backend analysis.
               </p>
             </div>
           ) : (

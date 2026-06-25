@@ -80,9 +80,9 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
               <div id="status-processing-card" className="p-5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-4">
                 <div id="processing-loader" className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin flex-shrink-0" />
                 <div id="processing-text-group">
-                  <h4 id="processing-subheading" className="text-sm font-bold text-blue-800">Automated Inspection Executing</h4>
+                  <h4 id="processing-subheading" className="text-sm font-bold text-blue-800">Backend Analysis Executing</h4>
                   <p id="processing-desc" className="text-xs text-blue-600 mt-1">
-                    Gemini AI is scanning clauses, synthesizing definitions, and examining mutual liability caps. This takes up to 45 seconds.
+                    The backend is scanning clauses, synthesizing definitions, and examining mutual liability caps. This can take a short while.
                   </p>
                 </div>
               </div>

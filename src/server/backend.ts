@@ -4,7 +4,21 @@ import { ClauseAnalysis, Contract } from "@/src/types";
 
 type BackendUploadResult = {
   contract: Partial<Contract>;
-  rawHtml: string;
+  rawResponse: unknown;
+};
+
+type BackendQueuedDocument = {
+  document_id?: string;
+  file_name?: string;
+  status?: string;
+  gcs_path?: string;
+  message_id?: string;
+  reason?: string;
+};
+
+type BackendUploadResponse = {
+  message?: string;
+  documents?: BackendQueuedDocument[];
 };
 
 export function getBackendApiUrl() {
@@ -33,17 +47,52 @@ export async function analyzeWithBackend(input: {
     body: formData,
   });
 
-  const rawHtml = await response.text();
+  const contentType = response.headers.get("content-type") || "";
+  const rawResponse = contentType.includes("application/json")
+    ? ((await response.json()) as BackendUploadResponse)
+    : await response.text();
+
   if (!response.ok) {
+    const message =
+      typeof rawResponse === "string"
+        ? stripTags(rawResponse).slice(0, 200)
+        : JSON.stringify(rawResponse).slice(0, 200);
     throw new Error(
-      `Backend upload failed with ${response.status}: ${stripTags(rawHtml).slice(0, 200)}`,
+      `Backend upload failed with ${response.status}: ${message}`,
     );
   }
 
   return {
-    contract: parseBackendAnalysisHtml(input.contractId, input.fileName, rawHtml),
-    rawHtml,
+    contract:
+      typeof rawResponse === "string"
+        ? parseBackendAnalysisHtml(input.contractId, input.fileName, rawResponse)
+        : parseBackendUploadJson(input.contractId, input.fileName, rawResponse),
+    rawResponse,
   };
+}
+
+export async function fetchBackendContracts(): Promise<Contract[] | null> {
+  const backendUrl = getBackendApiUrl();
+  if (!backendUrl) return null;
+
+  const response = await fetch(`${backendUrl}/api/contracts`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Backend contracts fetch failed with ${response.status}`);
+  }
+
+  return (await response.json()) as Contract[];
+}
+
+export async function fetchBackendAnalytics() {
+  const backendUrl = getBackendApiUrl();
+  if (!backendUrl) return null;
+
+  const response = await fetch(`${backendUrl}/api/analytics`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Backend analytics fetch failed with ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export async function proxyBackendExcelReport() {
@@ -115,6 +164,32 @@ function parseBackendAnalysisHtml(
       .join(" "),
     clauses: allClauses,
     warnings,
+  };
+}
+
+function parseBackendUploadJson(
+  contractId: string,
+  fileName: string,
+  payload: BackendUploadResponse,
+): Partial<Contract> {
+  const document = payload.documents?.[0];
+  const status = document?.status === "skipped" ? "Failed" : "Processing";
+
+  return {
+    id: document?.document_id || contractId,
+    fileName: document?.file_name || fileName,
+    status,
+    riskScore: 0,
+    contractType: status === "Failed" ? "Unsupported Document" : "Queued for Backend Analysis",
+    parties: [],
+    effectiveDate: "Pending",
+    duration: "Pending",
+    summary:
+      status === "Failed"
+        ? document?.reason || "Backend rejected this file."
+        : `${payload.message || "Document queued by backend."} Refresh shortly to load backend analysis results.`,
+    clauses: [],
+    warnings: 0,
   };
 }
 

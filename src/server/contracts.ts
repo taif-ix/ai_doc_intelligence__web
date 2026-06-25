@@ -283,7 +283,7 @@ export function startContractAnalysis(input: {
     effectiveDate: "Extracting...",
     duration: "Extracting...",
     summary:
-      "Extracting clauses and assessing risk benchmarks using Gemini Legal Intelligence...",
+      "Extracting clauses and assessing risk benchmarks using backend legal intelligence...",
     clauses: [],
     warnings: 0,
   };

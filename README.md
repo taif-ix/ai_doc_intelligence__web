@@ -24,6 +24,6 @@ BACKEND_API_URL="http://localhost:8080"
 
 `GEMINI_API_KEY` is used only by the server-side Next API route. If it is missing or left as the placeholder value, the app falls back to its offline simulated legal analysis.
 
-Set `BACKEND_API_URL` to the FastAPI backend from `taif-ix/contract_demo`. When configured, uploads from this Next app are sent to the backend `/upload-contracts` endpoint and report downloads are proxied from `/export-excel`.
+Set `BACKEND_API_URL` to the FastAPI backend from `taif-ix/contract_demo`. When configured, dashboard contracts are read from backend `/api/contracts`, analytics are read from backend `/api/analytics`, uploads are sent to backend `/upload-contracts`, and report downloads are proxied from `/export-excel`.
 
 The old `VITE_API_URL` value is no longer required because the migrated UI calls same-origin Next API routes under `/api`.
