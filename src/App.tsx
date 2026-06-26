@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   FolderLock, 
   Menu, 
@@ -46,58 +46,61 @@ export default function App() {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState<string>('');
+  const [pollUntil, setPollUntil] = useState<number | null>(null);
+  const isLoadingRef = useRef(false);
 
   // 1. Fetch data from backend on mount or tab changes
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+
     try {
-      const res = await fetch('/api/contracts');
-      if (res.ok) {
-        const data = await res.json();
-        setContracts(data);
+      const [contractsRes, statsRes] = await Promise.all([
+        fetch('/api/contracts'),
+        fetch('/api/analytics')
+      ]);
+
+      if (contractsRes.ok) {
+        setContracts(await contractsRes.json());
       }
 
-      const statsRes = await fetch('/api/analytics');
       if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
+        setStats(await statsRes.json());
       }
     } catch (err) {
       console.warn('API routes not yet initialized on port 3000. Operating in offline high-fidelity simulator:', err);
+    } finally {
+      isLoadingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
-  }, [currentTab]);
+  }, [currentTab, loadData]);
 
-  // 2. Poll the server for real-time updates whenever a contract is "Processing"
+  // 2. Poll briefly after a new upload; avoid polling forever for old DB rows stuck in "Processing".
   useEffect(() => {
-    const hasActiveProcessing = contracts.some(c => c.status === 'Processing');
-    if (hasActiveProcessing) {
-      const interval = setInterval(async () => {
-        try {
-          const res = await fetch('/api/contracts');
-          if (res.ok) {
-            const data = await res.json();
-            setContracts(data);
+    if (!pollUntil) return;
 
-            const statsRes = await fetch('/api/analytics');
-            if (statsRes.ok) {
-              const statsData = await statsRes.json();
-              setStats(statsData);
-            }
-          }
-        } catch (err) {
-          console.warn('Polling diagnostic error:', err);
-        }
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [contracts]);
+    const interval = setInterval(() => {
+      if (Date.now() > pollUntil) {
+        setPollUntil(null);
+        return;
+      }
+
+      void loadData();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [pollUntil, loadData]);
 
   // 3. Fallback state calculation if Express is starting up or disconnected
   const activeStats = useMemo(() => {
+    if (stats.totalCount > 0 || contracts.length === 0) {
+      return stats;
+    }
+
     if (contracts.length > 0) {
       const totalCount = contracts.length;
       const processingCount = contracts.filter(c => c.status === 'Processing').length;
@@ -126,10 +129,10 @@ export default function App() {
       ];
 
       return {
-        totalCount: totalCount + 122, // add base files from mockup reference index
-        processingCount: processingCount + (currentTab === 'dashboard' && stats.processingCount > 0 ? 1 : 0),
-        completedCount: completedCount + highRiskCount + 116,
-        failedCount: failedCount + 2,
+        totalCount,
+        processingCount,
+        completedCount: completedCount + highRiskCount,
+        failedCount,
         avgRiskScore: avgRiskScore > 0 ? avgRiskScore : 41,
         byType: byType.length > 0 ? byType : INITIAL_STATS.byType,
         byRiskLevel,
@@ -137,7 +140,7 @@ export default function App() {
       };
     }
     return stats;
-  }, [contracts, stats, currentTab]);
+  }, [contracts, stats]);
 
   // Handle uploading and executing analysis pipeline
   const handleAnalyzeContract = async (fileName: string, textContent: string) => {
@@ -158,17 +161,22 @@ export default function App() {
       if (response.ok) {
         const result = await response.json();
         // pre-insert local processing preview
-        setContracts(prev => [result.contract, ...prev]);
+        if (result.contract) {
+          setContracts(prev => [result.contract, ...prev]);
+        }
         setIsAnalyzing(false);
+        setPollUntil(Date.now() + 120000);
         // Take them back to dashboard to observe real-time scanning
         setCurrentTab('dashboard');
       } else {
-        throw new Error('Analysis server error. Please retry.');
+        const result = await response.json().catch(() => null);
+        setIsAnalyzing(false);
+        throw new Error(result?.error || 'Analysis server error. Please retry.');
       }
     } catch (err: unknown) {
-      console.error(err);
+      console.warn('Analysis request failed:', err);
       setIsAnalyzing(false);
-      alert(err instanceof Error ? err.message : 'Transient network disruption connection.');
+      throw err;
     }
   };
 
@@ -182,7 +190,7 @@ export default function App() {
         });
         if (res.ok) {
           setContracts(prev => prev.filter(c => c.id !== id));
-          loadData();
+          void loadData();
         }
       } catch {
         setContracts(prev => prev.filter(c => c.id !== id));

@@ -55,7 +55,7 @@ export async function analyzeWithBackend(input: {
   if (!response.ok) {
     const message =
       typeof rawResponse === "string"
-        ? stripTags(rawResponse).slice(0, 200)
+        ? stripTags(rawResponse).slice(0, 1000)
         : JSON.stringify(rawResponse).slice(0, 200);
     throw new Error(
       `Backend upload failed with ${response.status}: ${message}`,
