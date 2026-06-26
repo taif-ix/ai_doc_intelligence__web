@@ -142,6 +142,11 @@ export default function App() {
     return stats;
   }, [contracts, stats]);
 
+  const selectedContractForModal = useMemo(() => {
+    if (!selectedContract) return null;
+    return contracts.find(contract => contract.id === selectedContract.id) ?? selectedContract;
+  }, [contracts, selectedContract]);
+
   // Handle uploading and executing analysis pipeline
   const handleAnalyzeContract = async (fileName: string, textContent: string) => {
     setIsAnalyzing(true);
@@ -160,14 +165,20 @@ export default function App() {
 
       if (response.ok) {
         const result = await response.json();
-        // pre-insert local processing preview
         if (result.contract) {
-          setContracts(prev => [result.contract, ...prev]);
+          setContracts(prev => [
+            result.contract,
+            ...prev.filter(contract => contract.id !== result.contract.id)
+          ]);
         }
         setIsAnalyzing(false);
         setPollUntil(Date.now() + 120000);
         // Take them back to dashboard to observe real-time scanning
         setCurrentTab('dashboard');
+        void loadData();
+        window.setTimeout(() => {
+          void loadData();
+        }, 1500);
       } else {
         const result = await response.json().catch(() => null);
         setIsAnalyzing(false);
@@ -361,9 +372,9 @@ export default function App() {
       </nav>
 
       {/* Slide-out drilldown audit drawer detail modal */}
-      {selectedContract && (
+      {selectedContractForModal && (
         <ContractDetailModal 
-          contract={selectedContract} 
+          contract={selectedContractForModal} 
           onClose={() => setSelectedContract(null)} 
         />
       )}
