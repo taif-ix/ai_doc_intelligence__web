@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 interface UploadViewProps {
-  onAnalyze: (fileName: string, textContent: string) => Promise<void>;
+  onAnalyze: (fileName: string, textContent: string, file?: File) => Promise<void>;
   isAnalyzing: boolean;
 }
 
@@ -18,6 +18,7 @@ export function UploadView({ onAnalyze, isAnalyzing }: UploadViewProps) {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
   const [textContent, setTextContent] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [errorText, setErrorText] = useState('');
 
@@ -87,18 +88,26 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
 
   const handleFile = (file: File) => {
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      setTextContent(text || '');
-    };
-    reader.readAsText(file);
+    setSelectedFile(file);
+    setErrorText('');
+
+    if (/\.(txt|md)$/i.test(file.name)) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        setTextContent(text || '');
+      };
+      reader.readAsText(file);
+    } else {
+      setTextContent('');
+    }
   };
 
   const loadSample = (type: 'nda' | 'employment') => {
     const sample = SAMPLES[type];
     setFileName(sample.name);
     setTextContent(sample.text);
+    setSelectedFile(null);
     setErrorText('');
   };
 
@@ -111,7 +120,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
       setErrorText('Please specify a file name or select one of the testing samples.');
       return;
     }
-    if (!textContent.trim()) {
+    if (!selectedFile && !textContent.trim()) {
       setErrorText('Please provide or paste the contract text content before analyzing.');
       return;
     }
@@ -131,7 +140,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
     }, 1500);
 
     try {
-      await onAnalyze(fileName, textContent);
+      await onAnalyze(fileName, textContent, selectedFile || undefined);
       clearInterval(stepInterval);
       setActiveStep(3);
     } catch (err: unknown) {
@@ -148,7 +157,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
           <div id="upload-card-header">
             <h2 className="text-xl font-bold text-[#191B23]">Upload New Agreement</h2>
             <p className="text-xs text-[#737686] mt-1 font-medium">
-              Supports .txt files via drag & drop, or copying the clauses text directly.
+              Supports PDF, DOC, DOCX, TXT, or copying the clauses text directly.
             </p>
           </div>
 
@@ -171,7 +180,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
               type="file"
               ref={fileInputRef}
               onChange={handleFileInputChange}
-              accept=".txt,.md,.pdf,.docx"
+              accept=".txt,.md,.pdf,.doc,.docx"
               className="hidden"
             />
             <div className="w-12 h-12 rounded-xl bg-[#EBF2FE] flex items-center justify-center text-[#004AC6] mb-3 shadow-sm">
@@ -181,7 +190,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
               Drag and drop file here, or <span className="text-[#2563EB] hover:underline">browse files</span>
             </p>
             <p className="text-[10px] text-[#737686] font-medium mt-1">
-              Plain text (.txt) files only
+              Supports PDF, DOCX, DOC, TXT
             </p>
 
             {fileName && (
@@ -217,7 +226,10 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
               rows={8}
               placeholder="Paste details of the agreement clauses here for rigorous AI evaluation..."
               value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
+              onChange={(e) => {
+                setTextContent(e.target.value);
+                setSelectedFile(null);
+              }}
               className="w-full text-xs p-3 font-mono leading-relaxed bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl placeholder-[#737686]/60 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/40 bg-white"
             />
           </div>

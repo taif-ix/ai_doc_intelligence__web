@@ -71,6 +71,50 @@ export async function analyzeWithBackend(input: {
   };
 }
 
+export async function analyzeFileWithBackend(input: {
+  contractId: string;
+  file: File;
+}): Promise<BackendUploadResult | null> {
+  const backendUrl = getBackendApiUrl();
+  if (!backendUrl) return null;
+
+  const formData = new FormData();
+  formData.append("files", input.file, input.file.name);
+
+  const response = await fetch(`${backendUrl}/upload-contracts`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const rawResponse = contentType.includes("application/json")
+    ? ((await response.json()) as BackendUploadResponse)
+    : await response.text();
+
+  if (!response.ok) {
+    const message =
+      typeof rawResponse === "string"
+        ? stripTags(rawResponse).slice(0, 1000)
+        : JSON.stringify(rawResponse).slice(0, 200);
+    throw new Error(
+      `Backend upload failed with ${response.status}: ${message}`,
+    );
+  }
+
+  const fileName =
+    typeof rawResponse === "string"
+      ? input.file.name
+      : rawResponse.documents?.[0]?.file_name || input.file.name;
+
+  return {
+    contract:
+      typeof rawResponse === "string"
+        ? parseBackendAnalysisHtml(input.contractId, fileName, rawResponse)
+        : parseBackendUploadJson(input.contractId, fileName, rawResponse),
+    rawResponse,
+  };
+}
+
 export async function fetchBackendContracts(): Promise<Contract[] | null> {
   const backendUrl = getBackendApiUrl();
   if (!backendUrl) return null;
@@ -129,6 +173,27 @@ export async function proxyBackendContractFile(contractId: string) {
   }
 
   const response = await fetch(`${backendUrl}/api/contracts/${contractId}/file`, {
+    cache: "no-store",
+  });
+  const headers = new Headers(response.headers);
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export async function proxyBackendContractPreview(contractId: string) {
+  const backendUrl = getBackendApiUrl();
+  if (!backendUrl) {
+    return new Response(JSON.stringify({ error: "BACKEND_API_URL is not configured." }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  const response = await fetch(`${backendUrl}/api/contracts/${contractId}/preview`, {
     cache: "no-store",
   });
   const headers = new Headers(response.headers);

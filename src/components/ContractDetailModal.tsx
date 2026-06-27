@@ -31,9 +31,12 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
     setExpandedClause(expandedClause === id ? null : id);
   };
   const sourceUrl = `/api/contracts/${contract.id}/file`;
+  const previewUrl = `/api/contracts/${contract.id}/preview`;
   const fileType = contract.fileType.toLowerCase();
   const canPreviewInline = fileType === 'pdf' || fileType === 'txt';
-  const shouldShowSourcePreview = canPreviewInline || showSourcePreview;
+  const canPreviewExtractedText = fileType === 'doc' || fileType === 'docx';
+  const sourceFrameUrl = canPreviewInline ? sourceUrl : previewUrl;
+  const shouldShowSourcePreview = canPreviewInline || canPreviewExtractedText || showSourcePreview;
 
   // Determine risk presentation details
   let scoreColor = 'text-green-600 bg-green-50 border-green-200';
@@ -99,20 +102,27 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
 
               <div className="flex-1 min-h-0 p-4">
                 {shouldShowSourcePreview ? (
-                  <iframe
-                    id="source-document-frame"
-                    title={`Source preview for ${contract.fileName}`}
-                    src={sourceUrl}
-                    className="w-full h-full min-h-[28rem] xl:min-h-0 rounded-xl border border-[#E2E8F0] bg-white"
-                  />
+                  <div className="h-full min-h-[28rem] xl:min-h-0 rounded-xl border border-[#E2E8F0] bg-white overflow-hidden">
+                    {contract.status === 'Failed' && (
+                      <div className="px-4 py-3 border-b border-red-100 bg-red-50 text-xs text-red-700">
+                        Backend extraction failed for this file: {contract.summary}
+                      </div>
+                    )}
+                    <iframe
+                      id="source-document-frame"
+                      title={`Source preview for ${contract.fileName}`}
+                      src={sourceFrameUrl}
+                      className="w-full h-full min-h-[25rem] xl:min-h-[calc(100%-2.5rem)] bg-white"
+                    />
+                  </div>
                 ) : (
                   <div className="h-full min-h-[28rem] rounded-xl border border-dashed border-[#C3C6D7] bg-white flex flex-col items-center justify-center text-center p-8">
                     <div className="w-14 h-14 rounded-2xl bg-[#EBF2FE] text-[#004AC6] flex items-center justify-center mb-4">
                       <FileText className="w-7 h-7" />
                     </div>
-                    <h3 className="text-sm font-extrabold text-[#191B23]">Preview opens as a file</h3>
+                    <h3 className="text-sm font-extrabold text-[#191B23]">Preview unavailable</h3>
                     <p className="text-xs text-[#737686] mt-2 max-w-sm">
-                      Browser preview works best for PDF and TXT. For {fileType.toUpperCase()} files, open the uploaded source here and compare it with the extracted analysis on the right.
+                      Browser preview is available for PDF, TXT, DOC, and DOCX. Open the uploaded source here and compare it with the extracted analysis on the right.
                     </p>
                     <button
                       type="button"

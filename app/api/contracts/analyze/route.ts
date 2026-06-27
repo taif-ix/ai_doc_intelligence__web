@@ -1,25 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { startContractAnalysis } from "@/src/server/contracts";
-import { analyzeWithBackend, getBackendApiUrl } from "@/src/server/backend";
+import { analyzeFileWithBackend, analyzeWithBackend, getBackendApiUrl } from "@/src/server/backend";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { fileName, textContent, fileSize } = body;
+  const contentType = request.headers.get("content-type") || "";
+  let file: File | null = null;
+  let fileName = "";
+  let textContent = "";
+  let fileSize = "";
 
-  if (!fileName || !textContent) {
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const uploadedFile = formData.get("file");
+    if (uploadedFile instanceof File) {
+      file = uploadedFile;
+      fileName = uploadedFile.name;
+      fileSize = `${Math.ceil(uploadedFile.size / 1024)} KB`;
+    }
+    textContent = String(formData.get("textContent") || "");
+  } else {
+    const body = await request.json();
+    fileName = body.fileName;
+    textContent = body.textContent;
+    fileSize = body.fileSize;
+  }
+
+  if (!fileName || (!file && !textContent)) {
     return NextResponse.json(
-      { error: "FileName and custom text content are required." },
+      { error: "A file or custom text content is required." },
       { status: 400 },
     );
   }
 
   if (getBackendApiUrl()) {
     try {
-      const backendResult = await analyzeWithBackend({
-        contractId: `contract-${Date.now()}`,
-        fileName,
-        textContent,
-      });
+      const contractId = `contract-${Date.now()}`;
+      const backendResult = file
+        ? await analyzeFileWithBackend({ contractId, file })
+        : await analyzeWithBackend({
+            contractId,
+            fileName,
+            textContent,
+          });
 
       return NextResponse.json(
         {

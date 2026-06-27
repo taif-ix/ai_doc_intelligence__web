@@ -148,19 +148,20 @@ export default function App() {
   }, [contracts, selectedContract]);
 
   // Handle uploading and executing analysis pipeline
-  const handleAnalyzeContract = async (fileName: string, textContent: string) => {
+  const handleAnalyzeContract = async (fileName: string, textContent: string, file?: File) => {
     setIsAnalyzing(true);
     try {
+      const body = new FormData();
+      body.append('fileName', fileName);
+      body.append('textContent', textContent);
+
+      if (file) {
+        body.append('file', file, file.name);
+      }
+
       const response = await fetch('/api/contracts/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          fileName,
-          textContent,
-          fileSize: `${Math.ceil((textContent.length * 1.5) / 1024)} KB`
-        })
+        body
       });
 
       if (response.ok) {
