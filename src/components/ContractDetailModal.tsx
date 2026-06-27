@@ -7,6 +7,8 @@ import {
   BookOpen, 
   Users, 
   Scale, 
+  FileText,
+  Download,
   ChevronRight, 
   ChevronDown,
   Info
@@ -27,6 +29,9 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
   const toggleClause = (id: string) => {
     setExpandedClause(expandedClause === id ? null : id);
   };
+  const sourceUrl = `/api/contracts/${contract.id}/file`;
+  const fileType = contract.fileType.toLowerCase();
+  const canPreviewInline = fileType === 'pdf' || fileType === 'txt';
 
   // Determine risk presentation details
   let scoreColor = 'text-green-600 bg-green-50 border-green-200';
@@ -52,7 +57,7 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col z-50 border-l border-[#E2E8F0]"
+          className="relative bg-white w-full max-w-[92rem] h-full shadow-2xl flex flex-col z-50 border-l border-[#E2E8F0]"
         >
           {/* Header */}
           <div id="drawer-header" className="px-6 py-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
@@ -73,8 +78,57 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
             </button>
           </div>
 
-          {/* Scrollable Content */}
-          <div id="drawer-scroll-area" className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+          <div id="drawer-comparison-grid" className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(28rem,0.85fr)]">
+            <section id="source-document-pane" className="min-h-[22rem] xl:min-h-0 border-b xl:border-b-0 xl:border-r border-[#E2E8F0] bg-[#F8FAFC] flex flex-col">
+              <div className="px-5 py-4 border-b border-[#E2E8F0] flex items-center justify-between gap-3 bg-white">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase font-extrabold tracking-wider text-[#737686]">Uploaded Source</p>
+                  <p className="text-sm font-bold text-[#191B23] truncate" title={contract.fileName}>{contract.fileName}</p>
+                </div>
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#EBF2FE] text-[#004AC6] text-xs font-bold border border-[#C3C6D7]/50 hover:bg-[#DBEAFE] transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Open
+                </a>
+              </div>
+
+              <div className="flex-1 min-h-0 p-4">
+                {canPreviewInline ? (
+                  <iframe
+                    id="source-document-frame"
+                    title={`Source preview for ${contract.fileName}`}
+                    src={sourceUrl}
+                    className="w-full h-full min-h-[28rem] xl:min-h-0 rounded-xl border border-[#E2E8F0] bg-white"
+                  />
+                ) : (
+                  <div className="h-full min-h-[28rem] rounded-xl border border-dashed border-[#C3C6D7] bg-white flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-14 h-14 rounded-2xl bg-[#EBF2FE] text-[#004AC6] flex items-center justify-center mb-4">
+                      <FileText className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-sm font-extrabold text-[#191B23]">Preview opens as a file</h3>
+                    <p className="text-xs text-[#737686] mt-2 max-w-sm">
+                      Browser preview is available for PDF and TXT. For {fileType.toUpperCase()} files, open the uploaded source and compare it with the extracted analysis on the right.
+                    </p>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2563EB] text-white text-xs font-bold shadow-sm hover:bg-[#1D4ED8] transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Open Uploaded File
+                    </a>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Scrollable Content */}
+            <div id="drawer-scroll-area" className="min-h-0 overflow-y-auto p-6 space-y-6 custom-scrollbar">
             {/* Status & Score Alert */}
             {contract.status === 'Processing' ? (
               <div id="status-processing-card" className="p-5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center gap-4">
@@ -249,6 +303,7 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
                 </div>
               </>
             )}
+            </div>
           </div>
         </motion.div>
       </div>

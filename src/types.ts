@@ -15,7 +15,7 @@ export interface Contract {
   id: string;
   fileName: string;
   fileSize: string;
-  fileType: 'pdf' | 'docx' | 'txt';
+  fileType: 'pdf' | 'docx' | 'doc' | 'txt';
   uploadedAt: string;
   status: 'Completed' | 'Processing' | 'High Risk' | 'Failed';
   riskScore: number; // 0 to 100
@@ -26,6 +26,7 @@ export interface Contract {
   summary: string;
   clauses: ClauseAnalysis[];
   warnings: number; // count of High risk clauses
+  gcsPath?: string;
 }
 
 export interface IntelligenceStats {

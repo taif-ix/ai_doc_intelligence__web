@@ -119,6 +119,27 @@ export async function proxyBackendExcelReport() {
   });
 }
 
+export async function proxyBackendContractFile(contractId: string) {
+  const backendUrl = getBackendApiUrl();
+  if (!backendUrl) {
+    return new Response(JSON.stringify({ error: "BACKEND_API_URL is not configured." }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  const response = await fetch(`${backendUrl}/api/contracts/${contractId}/file`, {
+    cache: "no-store",
+  });
+  const headers = new Headers(response.headers);
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function parseBackendAnalysisHtml(
   contractId: string,
   fileName: string,
