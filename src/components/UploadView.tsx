@@ -18,7 +18,7 @@ export function UploadView({ onAnalyze, isAnalyzing }: UploadViewProps) {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
   const [textContent, setTextContent] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [activeStep, setActiveStep] = useState(0);
   const [errorText, setErrorText] = useState('');
 
@@ -75,29 +75,29 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(Array.from(e.target.files));
     }
   };
 
-  const handleFile = (file: File) => {
-    setFileName(file.name);
-    setSelectedFile(file);
+  const handleFiles = (files: File[]) => {
+    setSelectedFiles(files);
+    setFileName(files.length === 1 ? files[0].name : `${files.length} files selected`);
     setErrorText('');
 
-    if (/\.(txt|md)$/i.test(file.name)) {
+    if (files.length === 1 && /\.(txt|md)$/i.test(files[0].name)) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
         setTextContent(text || '');
       };
-      reader.readAsText(file);
+      reader.readAsText(files[0]);
     } else {
       setTextContent('');
     }
@@ -107,7 +107,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
     const sample = SAMPLES[type];
     setFileName(sample.name);
     setTextContent(sample.text);
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setErrorText('');
   };
 
@@ -116,11 +116,11 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
   };
 
   const handleSubmitAnalysis = async () => {
-    if (!fileName) {
-      setErrorText('Please specify a file name or select one of the testing samples.');
+    if (!fileName && selectedFiles.length === 0) {
+      setErrorText('Please specify a file name, upload files, or select one of the testing samples.');
       return;
     }
-    if (!selectedFile && !textContent.trim()) {
+    if (selectedFiles.length === 0 && !textContent.trim()) {
       setErrorText('Please provide or paste the contract text content before analyzing.');
       return;
     }
@@ -140,7 +140,13 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
     }, 1500);
 
     try {
-      await onAnalyze(fileName, textContent, selectedFile || undefined);
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          await onAnalyze(file.name, '', file);
+        }
+      } else {
+        await onAnalyze(fileName, textContent);
+      }
       clearInterval(stepInterval);
       setActiveStep(3);
     } catch (err: unknown) {
@@ -181,6 +187,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
               ref={fileInputRef}
               onChange={handleFileInputChange}
               accept=".txt,.md,.pdf,.doc,.docx"
+              multiple
               className="hidden"
             />
             <div className="w-12 h-12 rounded-xl bg-[#EBF2FE] flex items-center justify-center text-[#004AC6] mb-3 shadow-sm">
@@ -194,9 +201,25 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
             </p>
 
             {fileName && (
-              <div id="attached-file-badge" className="mt-4 px-3 py-1.5 bg-[#EBF2FE] border border-[#004AC6]/15 rounded-lg flex items-center gap-2 text-[#004AC6] max-w-xs text-xs font-semibold">
+              <div id="attached-file-badge" className="mt-4 px-3 py-1.5 bg-[#EBF2FE] border border-[#004AC6]/15 rounded-lg flex items-center gap-2 text-[#004AC6] max-w-md text-xs font-semibold">
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{fileName}</span>
+              </div>
+            )}
+
+            {selectedFiles.length > 1 && (
+              <div className="mt-3 w-full max-w-md rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-left">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#737686] mb-1">
+                  Files queued
+                </p>
+                <div className="max-h-24 overflow-y-auto space-y-1 custom-scrollbar">
+                  {selectedFiles.map((file) => (
+                    <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex items-center gap-2 text-xs text-[#434655]">
+                      <FileText className="w-3.5 h-3.5 text-[#004AC6] flex-shrink-0" />
+                      <span className="truncate">{file.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -228,7 +251,7 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
               value={textContent}
               onChange={(e) => {
                 setTextContent(e.target.value);
-                setSelectedFile(null);
+                setSelectedFiles([]);
               }}
               className="w-full text-xs p-3 font-mono leading-relaxed bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl placeholder-[#737686]/60 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/40 bg-white"
             />
@@ -253,7 +276,13 @@ This Executive Employment Agreement ("Agreement") is dated as of June 15, 2026, 
             }`}
           >
             <Sparkles className="w-4 h-4 cursor-pointer" />
-            <span>{isAnalyzing ? 'Compliance Assessment Active...' : 'Initiate Automated Compliance Audit'}</span>
+            <span>
+              {isAnalyzing
+                ? 'Compliance Assessment Active...'
+                : selectedFiles.length > 1
+                  ? `Initiate Audit for ${selectedFiles.length} Files`
+                  : 'Initiate Automated Compliance Audit'}
+            </span>
           </button>
         </div>
       </div>
