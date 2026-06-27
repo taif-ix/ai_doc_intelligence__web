@@ -23,6 +23,7 @@ interface ContractDetailModalProps {
 
 export function ContractDetailModal({ contract, onClose }: ContractDetailModalProps) {
   const [expandedClause, setExpandedClause] = useState<string | null>(null);
+  const [showSourcePreview, setShowSourcePreview] = useState(false);
 
   if (!contract) return null;
 
@@ -32,6 +33,7 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
   const sourceUrl = `/api/contracts/${contract.id}/file`;
   const fileType = contract.fileType.toLowerCase();
   const canPreviewInline = fileType === 'pdf' || fileType === 'txt';
+  const shouldShowSourcePreview = canPreviewInline || showSourcePreview;
 
   // Determine risk presentation details
   let scoreColor = 'text-green-600 bg-green-50 border-green-200';
@@ -85,19 +87,18 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
                   <p className="text-[10px] uppercase font-extrabold tracking-wider text-[#737686]">Uploaded Source</p>
                   <p className="text-sm font-bold text-[#191B23] truncate" title={contract.fileName}>{contract.fileName}</p>
                 </div>
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setShowSourcePreview(true)}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#EBF2FE] text-[#004AC6] text-xs font-bold border border-[#C3C6D7]/50 hover:bg-[#DBEAFE] transition-colors"
                 >
                   <Download className="w-4 h-4" />
-                  Open
-                </a>
+                  Open in Dialog
+                </button>
               </div>
 
               <div className="flex-1 min-h-0 p-4">
-                {canPreviewInline ? (
+                {shouldShowSourcePreview ? (
                   <iframe
                     id="source-document-frame"
                     title={`Source preview for ${contract.fileName}`}
@@ -111,17 +112,16 @@ export function ContractDetailModal({ contract, onClose }: ContractDetailModalPr
                     </div>
                     <h3 className="text-sm font-extrabold text-[#191B23]">Preview opens as a file</h3>
                     <p className="text-xs text-[#737686] mt-2 max-w-sm">
-                      Browser preview is available for PDF and TXT. For {fileType.toUpperCase()} files, open the uploaded source and compare it with the extracted analysis on the right.
+                      Browser preview works best for PDF and TXT. For {fileType.toUpperCase()} files, open the uploaded source here and compare it with the extracted analysis on the right.
                     </p>
-                    <a
-                      href={sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => setShowSourcePreview(true)}
                       className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2563EB] text-white text-xs font-bold shadow-sm hover:bg-[#1D4ED8] transition-colors"
                     >
                       <Download className="w-4 h-4" />
                       Open Uploaded File
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>
